@@ -1,0 +1,590 @@
+
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <title>برنامج متابعة خطوط سير الموجهين</title>
+  <style>
+    body {
+      font-family: 'Cairo', Tahoma, sans-serif;
+      direction: rtl;
+      background: #f9f9f9;
+      margin: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 { text-align: center; margin-bottom: 20px; }
+    
+    .top-actions {
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    button.btn-add-top {
+      background-color: #28a745;
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+      transition: background 0.3s ease, transform 0.1s ease;
+      width: 100%;
+    }
+    button.btn-add-top:hover { background-color: #218838; }
+    button.btn-add-top:active { transform: scale(0.99); }
+
+    .search-box {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    input, select, button {
+      padding: 8px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      background: #007bff;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    button:hover { background: #0056b3; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th { background: #eee; }
+    #count { margin-top: 10px; font-weight: bold; color: #333; }
+    .actions {
+      margin-top: 15px;
+      text-align: center;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .loading { text-align: center; font-weight: bold; color: #555; }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      width: 95%;
+      max-width: 600px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      position: relative;
+    }
+    .close-btn {
+      position: absolute;
+      left: 15px;
+      top: 10px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #aaa;
+      cursor: pointer;
+    }
+    .close-btn:hover { color: #000; }
+    .form-group { display: flex; flex-direction: column; margin-bottom: 12px; }
+    .form-group label { margin-bottom: 5px; font-weight: bold; }
+    .form-group input { width: 100%; box-sizing: border-box; }
+    .main-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: #f1f8ff;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      border: 1px solid #c8e1ff;
+    }
+    .days-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .days-list {
+      max-height: 250px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 6px;
+      background: #fafafa;
+    }
+    .day-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+    .day-row input[type="date"] { flex: 1; }
+    .day-row input[type="text"] { flex: 2; }
+    .btn-remove-row { background: #dc3545; color: #fff; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
+    .btn-remove-row:hover { background: #bd2130; }
+    .btn-add-row { background: #17a2b8; color: #fff; font-size: 13px; padding: 6px 12px; }
+    .btn-add-row:hover { background: #138496; }
+    .btn-copy-dates { background: #6f42c1; color: #fff; font-size: 13px; padding: 6px 12px; }
+    .btn-copy-dates:hover { background: #59319d; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
+    .btn-save { background-color: #28a745; }
+    .btn-save:hover { background-color: #218838; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>برنامج متابعة خطوط سير الموجهين - إعداد روماني رؤوف</h2>
+    
+    <div class="top-actions">
+      <button class="btn-add-top" onclick="openForm()">➕ تسجيل خط سير شهر كامل للموجه</button>
+    </div>
+
+    <div class="search-box">
+      <input type="date" id="searchDate" placeholder="التاريخ">
+      <input type="text" id="searchInspector" placeholder="اسم الموجه">
+      <input type="text" id="searchSchool" placeholder="المدرسة / الجهة">
+      <input type="text" id="searchSubject" placeholder="المادة">
+      <button onclick="searchData()">بحث</button>
+      <button onclick="resetData()">إعادة تعيين</button>
+    </div>
+
+    <table id="resultsTable">
+      <thead>
+        <tr>
+          <th>التاريخ</th>
+          <th>اسم الموجه</th>
+          <th>المدرسة / الجهة</th>
+          <th>المادة</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="4" class="loading">جاري تحميل البيانات...</td></tr>
+      </tbody>
+    </table>
+
+    <div id="count"></div>
+
+    <div class="actions">
+      <button onclick="loadMore()">تحميل المزيد</button>
+      <button onclick="printCurrentReport()">طباعة التقرير الحالي</button>
+      <button onclick="printReport()">طباعة تقرير حسب المادة</button>
+    </div>
+  </div>
+
+  <div id="newRouteModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeForm()">&times;</span>
+      <h3 style="text-align: center; margin-top: 0;">تسجيل خط سير موجه (شهر كامل)</h3>
+      
+      <form id="addRouteForm" onsubmit="saveNewRoutes(event)">
+        <div class="main-info-grid">
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="newInspector">اسم الموجه:</label>
+            <input type="text" id="newInspector" placeholder="أدخل اسم الموجه" required>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="newSubject">المادة:</label>
+            <input type="text" id="newSubject" placeholder="أدخل المادة" required>
+          </div>
+        </div>
+
+        <div class="days-header">
+          <label style="font-weight:bold;">جدول الأيام والزيارات المخططة:</label>
+          <div>
+            <button type="button" class="btn-copy-dates" onclick="copyPreviousDates()">📋 نسخ تواريخ آخر خط سير</button>
+            <button type="button" class="btn-add-row" onclick="addDayRow()">+ إضافة يوم آخر</button>
+          </div>
+        </div>
+
+        <div class="days-list" id="daysContainer"></div>
+
+        <div class="form-actions">
+          <button type="button" style="background:#6c757d;" onclick="closeForm()">إلغاء</button>
+          <button type="submit" class="btn-save">حفظ البيانات في الشيت</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let sheetData = [];
+    let displayedData = [];
+    let currentIndex = 0;
+    const batchSize = 200;
+
+    const scriptURL = "https://script.google.com/macros/s/AKfycbw9vxw6c2Q3iMKdUpuyukG4xs3uO8TOaST79R8aw6G-FMKSwTuHcgdqFMrDwcmgy9o-/exec";
+
+    async function loadData() {
+      // تم إضافة طابع زمني عشوائي عالي الدقة لمنع تخزين استجابة CSV نهائياً
+      const cacheBuster = "nocache=" + new Date().getTime() + "_" + Math.random().toString(36).substring(2, 9);
+      const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS8jASj0WMJRuOqYjouy_7CD9J61l93xeHNEM3Ex6nsPtjY3M77228ClcY7W-dV1v-uKgkUu0bNRHo9/pub?output=csv&" + cacheBuster;
+
+      try {
+        const response = await fetch(url, { cache: "no-store", headers: { "Pragma": "no-cache" } });
+        const text = await response.text();
+
+        const rows = text.split("\n").map(r => r.split(","));
+        const headers = rows[0].map(h => h.trim());
+
+        sheetData = rows.slice(1).map(r => {
+          const obj = {};
+          headers.forEach((h, i) => {
+            obj[h] = r[i] ? r[i].trim() : "";
+          });
+          return {
+            date: normalizeDate(obj["التاريخ"] || obj["اليوم"]),
+            inspector: obj["اسم الموجه"] || obj["الموجه"],
+            school: obj["المدرسة"] || obj["الجهة"],
+            subject: obj["المادة"] || obj["المواد"]
+          };
+        });
+
+        // تصفيات القيم الفارغة إن وجدت
+        sheetData = sheetData.filter(item => item.inspector || item.school || item.date);
+
+        displayedData = [];
+        currentIndex = 0;
+        loadMore();
+      } catch (error) {
+        document.querySelector("#resultsTable tbody").innerHTML = "<tr><td colspan='4'>تعذر تحميل البيانات</td></tr>";
+        console.error("خطأ في تحميل البيانات:", error);
+      }
+    }
+
+    function loadMore() {
+      const nextBatch = sheetData.slice(currentIndex, currentIndex + batchSize);
+      displayedData = displayedData.concat(nextBatch);
+      currentIndex += batchSize;
+      displayResults(displayedData);
+    }
+
+    function normalizeDate(dateStr) {
+      if (!dateStr) return "";
+      const parts = dateStr.split("/");
+      if (parts.length === 3) {
+        const day = parts[0].padStart(2, "0");
+        const month = parts[1].padStart(2, "0");
+        const year = parts[2];
+        return `${year}-${month}-${day}`;
+      }
+      return dateStr;
+    }
+
+    function searchData() {
+      const date = document.getElementById("searchDate").value;
+      const inspector = document.getElementById("searchInspector").value.trim().toLowerCase();
+      const school = document.getElementById("searchSchool").value.trim().toLowerCase();
+      const subject = document.getElementById("searchSubject").value.trim().toLowerCase();
+
+      const results = sheetData.filter(item =>
+        (!date || item.date.includes(date)) &&
+        (!inspector || (item.inspector && item.inspector.toLowerCase().includes(inspector))) &&
+        (!school || (item.school && item.school.toLowerCase().includes(school))) &&
+        (!subject || (item.subject && item.subject.toLowerCase().includes(subject)))
+      );
+
+      displayResults(results);
+    }
+
+    function resetData() {
+      document.getElementById("searchDate").value = "";
+      document.getElementById("searchInspector").value = "";
+      document.getElementById("searchSchool").value = "";
+      document.getElementById("searchSubject").value = "";
+      displayResults(displayedData);
+    }
+
+    function displayResults(results) {
+      const tbody = document.querySelector("#resultsTable tbody");
+      tbody.innerHTML = "";
+
+      if (results.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='4'>لا توجد نتائج</td></tr>";
+        document.getElementById("count").innerText = "عدد النتائج: 0";
+      } else {
+        results.forEach(item => {
+          const row = `<tr>
+            <td>${item.date || ""}</td>
+            <td>${item.inspector || ""}</td>
+            <td>${item.school || ""}</td>
+            <td>${item.subject || ""}</td>
+          </tr>`;
+          tbody.innerHTML += row;
+        });
+        document.getElementById("count").innerText = "عدد النتائج المعروضة: " + results.length;
+      }
+    }
+
+    function printCurrentReport() {
+      const tbody = document.querySelector("#resultsTable tbody");
+      if (!tbody || tbody.rows.length === 0) {
+        alert("لا توجد بيانات للطباعة");
+        return;
+      }
+
+      let html = `<h2>برنامج متابعة خطوط سير الموجهين - إعداد روماني رؤوف</h2>`;
+      html += `<table border="1" style="border-collapse:collapse; width:100%; text-align:center;">`;
+      html += `<thead><tr><th>التاريخ</th><th>اسم الموجه</th><th>المدرسة / الجهة</th><th>المادة</th></tr></thead><tbody>`;
+
+      for (let row of tbody.rows) {
+        html += `<tr>${row.innerHTML}</tr>`;
+      }
+
+      html += `</tbody></table>`;
+
+      const printWindow = window.open("", "_blank");
+      printWindow.document.write(`
+        <html>
+        <head>
+          <title>تقرير النتائج الحالية</title>
+          <style>
+            body {font-family: Tahoma; direction: rtl;}
+            h2 {text-align:center; margin-bottom:20px;}
+            table {width:100%; border-collapse:collapse;}
+            th, td {border:1px solid #000; padding:6px;}
+            th {background:#eee;}
+          </style>
+        </head>
+        <body>${html}</body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
+
+    function printReport() {
+      const subject = document.getElementById("searchSubject").value.trim().toLowerCase();
+      if (!subject) {
+        alert("من فضلك اختر مادة قبل الطباعة");
+        return;
+      }
+
+      const filtered = sheetData.filter(item =>
+        item.subject && item.subject.toLowerCase().includes(subject)
+      );
+
+      if (filtered.length === 0) {
+        alert("لا توجد بيانات لهذه المادة");
+        return;
+      }
+
+      const dates = [...new Set(filtered.map(item => item.date))].sort();
+      const inspectors = [...new Set(filtered.map(item => item.inspector))];
+
+      let html = `<h2>برنامج متابعة خطوط سير الموجهين - إعداد روماني رؤوف <br>
+      تقرير مادة: ${subject}</h2>`;
+      html += `<table border="1" style="border-collapse:collapse; width:100%; text-align:center;">`;
+      html += `<thead><tr><th>التاريخ</th>`;
+      inspectors.forEach(inspector => {
+        html += `<th>${inspector}</th>`;
+      });
+      html += `</tr></thead><tbody>`;
+
+      dates.forEach(date => {
+        html += `<tr><td>${date}</td>`;
+        inspectors.forEach(inspector => {
+          const entry = filtered.find(item => item.date === date && item.inspector === inspector);
+          html += `<td>${entry ? entry.school : ""}</td>`;
+        });
+        html += `</tr>`;
+      });
+
+      html += `</tbody></table>`;
+
+      const printWindow = window.open("", "_blank");
+      printWindow.document.write(`
+        <html>
+        <head>
+          <title>تقرير مادة ${subject}</title>
+          <style>
+            body {font-family: Tahoma; direction: rtl;}
+            h2 {text-align:center; margin-bottom:20px;}
+            table {width:100%; border-collapse:collapse;}
+            th, td {border:1px solid #000; padding:6px;}
+            th {background:#eee;}
+          </style>
+        </head>
+        <body>${html}</body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
+
+    function openForm() {
+      const password = prompt("برجاء إدخال كلمة المرور لتسجيل خط سير جديد:");
+      if (password !== "852456") {
+        if (password !== null) alert("كلمة المرور غير صحيحة!");
+        return;
+      }
+
+      const container = document.getElementById("daysContainer");
+      container.innerHTML = "";
+      
+      for(let i = 0; i < 22; i++) {
+        addDayRow();
+      }
+      document.getElementById("newRouteModal").style.display = "flex";
+    }
+
+    function closeForm() {
+      document.getElementById("newRouteModal").style.display = "none";
+      document.getElementById("addRouteForm").reset();
+    }
+
+    function addDayRow(dateValue = "") {
+      const container = document.getElementById("daysContainer");
+      const div = document.createElement("div");
+      div.className = "day-row";
+      div.innerHTML = `
+        <input type="date" class="row-date" value="${dateValue}">
+        <input type="text" class="row-school" placeholder="اسم المدرسة / الجهة">
+        <button type="button" class="btn-remove-row" onclick="removeRow(this)">✕</button>
+      `;
+      container.appendChild(div);
+    }
+
+    function removeRow(btn) {
+      const rows = document.querySelectorAll(".day-row");
+      if (rows.length > 1) {
+        btn.parentElement.remove();
+      } else {
+        alert("يجب إدخال يوم واحد على الأقل!");
+      }
+    }
+
+    function copyPreviousDates() {
+      const savedDates = JSON.parse(localStorage.getItem("lastRouteDates") || "[]");
+      if (savedDates.length === 0) {
+        alert("لا توجد تواريخ مسجلة سابقاً لنسخها!");
+        return;
+      }
+
+      const dateInputs = document.querySelectorAll(".row-date");
+      while (dateInputs.length < savedDates.length) {
+        addDayRow();
+      }
+
+      const updatedInputs = document.querySelectorAll(".row-date");
+      savedDates.forEach((date, i) => {
+        if (updatedInputs[i]) {
+          updatedInputs[i].value = date;
+        }
+      });
+    }
+
+    async function saveNewRoutes(event) {
+      event.preventDefault();
+
+      const inspector = document.getElementById("newInspector").value.trim();
+      const subject = document.getElementById("newSubject").value.trim();
+      const dates = document.querySelectorAll(".row-date");
+      const schools = document.querySelectorAll(".row-school");
+
+      let newRecords = [];
+      let enteredDates = [];
+
+      dates.forEach((dateInput, index) => {
+        const dateVal = dateInput.value;
+        const schoolVal = schools[index].value.trim();
+
+        if (dateVal && schoolVal) {
+          newRecords.push({
+            date: dateVal,
+            inspector: inspector,
+            school: schoolVal,
+            subject: subject
+          });
+        }
+        if (dateVal) {
+          enteredDates.push(dateVal);
+        }
+      });
+
+      if (newRecords.length === 0) {
+        alert("من فضلك أدخل بيانات يوم واحد على الأقل (التاريخ والجهة)!");
+        return;
+      }
+
+      if (enteredDates.length > 0) {
+        localStorage.setItem("lastRouteDates", JSON.stringify(enteredDates));
+      }
+
+      const saveBtn = document.querySelector(".btn-save");
+      const originalBtnText = saveBtn.innerText;
+      saveBtn.innerText = "جاري الحفظ في الشيت...";
+      saveBtn.disabled = true;
+
+      try {
+        await fetch(scriptURL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(newRecords)
+        });
+
+        // إضافة الصفوف الجديدة في أعلى القائمة محلياً فوراً
+        newRecords.reverse().forEach(record => {
+          sheetData.unshift(record);
+          displayedData.unshift(record);
+        });
+
+        displayResults(displayedData);
+        closeForm();
+        alert(`تم حفظ ${newRecords.length} خط سير بنجاح في Google Sheets!`);
+
+      } catch (error) {
+        console.error("خطأ أثناء الحفظ:", error);
+        alert("حدث خطأ أثناء حفظ البيانات، يرجى المحاولة لاحقاً.");
+      } finally {
+        saveBtn.innerText = originalBtnText;
+        saveBtn.disabled = false;
+      }
+    }
+
+    window.onclick = function(event) {
+      const modal = document.getElementById("newRouteModal");
+      if (event.target === modal) closeForm();
+    };
+
+    loadData();
+  </script>
+</body>
+</html>
